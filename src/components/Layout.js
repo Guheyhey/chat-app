@@ -16,6 +16,9 @@ class Layout extends Component {
     this.initSocket();
   }
 
+  /**
+   * Connect to and initializes the socket
+   */
   initSocket = () => {
     const socket = io(socketUrl);
     socket.on('connect', () => {
@@ -23,6 +26,17 @@ class Layout extends Component {
     });
     this.setState({socket: socket});
   }
+
+  /**
+   * Set the user property in state
+   * @param user {id:number, name:string}
+   */
+
+  /**
+   * Set the user property in state to null
+  */
+
+ 
 
   render() {
     const { title } = this.props;
