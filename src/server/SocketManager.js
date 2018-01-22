@@ -1,13 +1,19 @@
 const io = require('./index.js').io;
 
-const { VERIFY_USER, USER_CONNECTED,LOGOUT } = require('../Events');
+const { VERIFY_USER, USER_CONNECTED, USER_DISCONNECTED, 
+  LOGOUT, COMMUNITY_CHAT, MESSAGE_SENT, TYPING, MESSAGE_RECIEVED } = require('../Events');
 const { createUser, createMessage, createChat } = require('../Factories');
 
 let connectedUsers = {};
+let communityChat = createChat();
+let chats = [communityChat];
 
 
 module.exports = function(socket) {
   console.log("Socket ID: " + socket.id);
+
+  let sendMessageToChatFromUser;
+  let sendTypingFromUser;
 
   // Verify Username
   socket.on(VERIFY_USER, (nickname, callback) => {
@@ -28,14 +34,73 @@ module.exports = function(socket) {
     connectedUsers = addUser(connectedUsers, user);
     socket.user = user;
 
+    sendMessageToChatFromUser = sendMessageToChat(user.name);
+    sendTypingFromUser = sendTypingToChat(user.name)
+
     io.emit(USER_CONNECTED, connectedUsers);
     console.log(connectedUsers);
   })
 
 
   // User disconnect
+  socket.on('disconnect', function (){
+    if(!!socket.user){
+      connectedUsers = removeUser(connectedUsers, socket.user.name)
+      
+      io.emit(USER_DISCONNECTED, connectedUsers)
+      console.log("disconnected", connectedUsers)
+    }
+    
+  })
 
   // User logout
+  socket.on(LOGOUT, function(){
+    connectedUsers = removeUser(connectedUsers, socket.user.name)
+    io.emit(USER_DISCONNECTED, connectedUsers)
+    console.log("logout", connectedUsers)
+  })
+
+  //send community chat 
+  socket.on(COMMUNITY_CHAT, (callback) => {
+    callback(communityChat);
+  })
+
+  
+
+  //user sends message 
+  socket.on(MESSAGE_SENT, function({chatId, message}){
+    sendMessageToChatFromUser(chatId, message)
+  })
+
+	//add user to typing users on chatId 
+  socket.on(TYPING, function({chatId, isTyping}){
+   
+    sendTypingFromUser(chatId, isTyping)
+  })
+}
+
+/**
+ * Return a function that will take a chat id and message
+ * and then emit a broadcas to the chat id
+ * @param sender {string} username of sender
+ * @return function(chatId, message)
+ */
+function sendMessageToChat(sender) {
+  return (chatId, message) => {
+    io.emit(`${MESSAGE_RECIEVED}-${chatId}`, createMessage({message, sender}))
+  }
+}
+
+/**
+ * Returns a function that will take a chat id and boolean isTyping variable
+ * and then emit a broadcast to the chat id that the sender is typing
+ * @param sender {string} username of sender
+ * @return function(chatId, isTyping)
+ */
+function sendTypingToChat(user){
+  return (chatId, isTyping) => {
+    io.emit(`${TYPING}-${chatId}`, {user, isTyping})
+  }
 }
 
 /**
