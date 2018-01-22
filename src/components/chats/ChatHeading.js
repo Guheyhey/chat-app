@@ -6,8 +6,24 @@ import MdEllipsisMenu from 'react-icons/lib/md/keyboard-control'
 class ChatHeading extends Component {
 
   render () {
+    const { name, numberOfUsers, online } = this.props;
+    const onlineText = online ? 'online':'offline'
     return (
-      <div>Chat Heading</div>
+      <div className="chat-header">
+        <div className="user-info">
+					<div className="user-name">{name}</div>
+					<div className="status">
+						<div className={`indicator ${onlineText}`}></div>
+						<span>{numberOfUsers ? numberOfUsers : null} online</span>
+					</div>
+				</div>
+
+        <div className="options">
+          <FAVideo></FAVideo>
+          <FAUserPlus></FAUserPlus>
+          <MdEllipsisMenu></MdEllipsisMenu>
+        </div>
+      </div>
     )
   }
 }

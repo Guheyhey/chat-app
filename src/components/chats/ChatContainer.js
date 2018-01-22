@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 
-import * as Events from '../../Events';
+import { COMMUNITY_CHAT, MESSAGE_RECIEVED, MESSAGE_SENT, TYPING } from '../../Events';
 import SideBar from './SideBar';
 import ChatHeading from './ChatHeading';
 import Messages from '../messages/Messages';
@@ -12,25 +12,56 @@ class ChatContainer extends Component {
 
     this.state = {
       chats: [],
-      activeChat: null
+      activeChat: null,
+      communityChat: null
     };
+
+	  this.removeSocketEvents = this.removeSocketEvents.bind(this)
+    this.socketEvents = [];
   }
 
+  /*
+	*	Initializes the socket.
+	*/	
+	initSocket(){
+		const { socket } = this.props
+		socket.on('connect', ()=>{
+			socket.emit(COMMUNITY_CHAT, this.resetChat)
+		})
+  }
+  
   componentDidMount() {
     const {socket} = this.props;
-    socket.emit(Events.COMMUNITY_CHAT, this.resetChat);
+    socket.emit(COMMUNITY_CHAT, this.resetChat);
+    this.initSocket();
   }
 
   setActiveChat = (activeChat) => {
     this.setState({activeChat: activeChat});
   }
 
+  deinitialize(){
+		const { socket } = this.props
+		this.removeSocketEvents(socket, this.socketEvents)
+  }
+  
+  /**
+	 * Removes chat event listeners on socket.
+	 */
+	removeSocketEvents(socket, events){
+
+		if(events.length > 0){
+			socket.off(events[0])
+			this.removeSocketEvents(socket, events.slice(1))
+		}
+	}
+
   /**
 	*	Reset the chat back to only the chat passed in.
 	* @param chat {Chat}
 	*/
-	resetChat(chat){
-		return this.addChat(chat, true)
+	resetChat = (chat) => {
+		return this.addChat(chat, true);
 	}
 
 	/**
@@ -46,10 +77,10 @@ class ChatContainer extends Component {
 		const { chats } = this.state
 		const newChats = reset ? [chat] : [...chats, chat]
 		
-		this.setState({chats: newChats, activeChat: chat})
+		this.setState({chats: newChats, activeChat: reset ? chat : this.state.activeChat})
 		
-		const messageEvent = `${Events.MESSAGE_RECIEVED}-${chat.id}`
-		const typingEvent = `${Events.TYPING}-${chat.id}`
+		const messageEvent = `${MESSAGE_RECIEVED}-${chat.id}`
+		const typingEvent = `${TYPING}-${chat.id}`
 
 		socket.on(messageEvent, this.addMessageToChat(chat.id))
 		socket.on(typingEvent, this.updateTypingInChat(chat.id))
@@ -78,16 +109,16 @@ class ChatContainer extends Component {
 	*	Updates the typing of chat with id passed in.
 	*	@param chatId {number}
 	*/
-	updateTypingInChat(chatId){
-		return ({isTyping, user}) =>{
-      if(user !== this.props.user.name){
+	updateTypingInChat(chatId) {
+		return ({isTyping, user}) => {
+      if (user !== this.props.user.name) {
 
         const { chats } = this.state
         let newChats = chats.map((chat) => {
-          if(chat.id === chatId){
-            if(isTyping && !chat.typingUsers.includes(user))
+          if (chat.id === chatId) {
+            if (isTyping && !chat.typingUsers.includes(user))
               chat.typingUsers.push(user)
-            else if(!isTyping && chat.typingUsers.includes(user))
+            else if (!isTyping && chat.typingUsers.includes(user))
               chat.typingUsers = chat.typingUsers.filter(u => u !== user)
           }
           return chat;
@@ -104,7 +135,8 @@ class ChatContainer extends Component {
    */
   sendMessage = (chatId, message) => {
     const {socket} = this.props;
-    socket.emit(Events.MESSAGE_SENT, {chatId, message})
+    // console.log(message);
+    socket.emit(MESSAGE_SENT, {chatId, message})
   }
 
 
@@ -115,7 +147,7 @@ class ChatContainer extends Component {
    */
   sendTyping = (chatId, isTyping) => {
     const {socket} = this.props;
-    socket.emit(Events.TYPING, {chatId, isTyping});
+    socket.emit(TYPING, {chatId, isTyping});
   }
 
 
@@ -130,7 +162,7 @@ class ChatContainer extends Component {
           chats={chats}
           user={user}
           activeChat={activeChat}
-          setActiveChat={this.setActiveChat}
+          setActiveChat={(chat)=> this.setActiveChat(chat)}
         />
 
         <div className="chat-room-container">
@@ -138,7 +170,10 @@ class ChatContainer extends Component {
             activeChat !== null
             ? (
               <div className="chat-room">
-                <ChatHeading name={activeChat.name}/>
+                <ChatHeading 
+                  name={activeChat.name}
+                  online={true}
+                  />
 
                 <Messages
                   messages={activeChat.messages}
