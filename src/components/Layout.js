@@ -3,8 +3,9 @@ import io from 'socket.io-client';
 
 import { USER_CONNECTED, LOGOUT } from '../Events';
 import LoginForm from './LoginForm';
+import ChatContainer from './chats/ChatContainer';
 
-const socketUrl = 'http://192.168.1.13:3231';
+const socketUrl = 'localhost:3231';
 
 class Layout extends Component {
   constructor(props) {
@@ -50,14 +51,18 @@ class Layout extends Component {
     this.setState({user: null});
   }
 
- 
+
 
   render() {
-    const { title } = this.props;
-    const { socket } = this.state;
+    // const { title } = this.props;
+    const { socket, user } = this.state;
     return (
       <div className="container">
-        <LoginForm socket={socket} setUser={this.setUser}/>
+        {
+          !user
+          ? <LoginForm socket={socket} setUser={this.setUser}/>
+          : <ChatContainer socket={socket} logout={this.logout} user={user}/>
+        }
       </div>
     );
   }
