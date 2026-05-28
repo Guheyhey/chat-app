@@ -1,3 +1,6 @@
+﻿> [!WARNING]
+> This repository is deprecated and archived. It is kept for historical reference only.
+
 ### A web Chat App based on React + Node.js + Express + Socket.io 
 
 1. Run `npm install` to install package dependencies
